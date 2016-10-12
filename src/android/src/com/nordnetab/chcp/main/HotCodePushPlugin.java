@@ -167,10 +167,15 @@ public class HotCodePushPlugin extends CordovaPlugin {
 
     @Override
     public void onStop() {
-        EventBus.getDefault().unregister(this);
-
         super.onStop();
     }
+
+    @Override
+    public void onDestroy() {
+        EventBus.getDefault().unregister(this);
+        super.onDestroy();
+    }
+
 
     // endregion
 

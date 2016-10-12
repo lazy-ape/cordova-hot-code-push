@@ -24,6 +24,8 @@ import com.nordnetab.chcp.main.storage.IObjectFileStorage;
 import com.nordnetab.chcp.main.utils.FilesUtility;
 import com.nordnetab.chcp.main.utils.URLUtility;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -55,7 +57,7 @@ class UpdateLoaderWorker implements WorkerTask {
      *
      * @param request download request
      */
-    UpdateLoaderWorker(final UpdateDownloadRequest request) {
+    public UpdateLoaderWorker(final UpdateDownloadRequest request) {
         applicationConfigUrl = request.getConfigURL();
         appNativeVersion = request.getCurrentNativeVersion();
         filesStructure = request.getCurrentReleaseFileStructure();
@@ -84,11 +86,22 @@ class UpdateLoaderWorker implements WorkerTask {
             return;
         }
 
-        // check if there is a new content version available
-        if (newContentConfig.getReleaseVersion().equals(oldAppConfig.getContentConfig().getReleaseVersion())) {
+
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy.MM.dd-HH.mm.ss");
+        try{
+            Date newReleaseDate = dateFormat.parse(newContentConfig.getReleaseVersion());
+            Date oldDate = dateFormat.parse(oldAppConfig.getContentConfig().getReleaseVersion());
+
+            if(newReleaseDate.getTime() <= oldDate.getTime()){
+                setNothingToUpdateResult(newAppConfig);
+                return;
+            }
+        }catch (Exception e){
+            e.printStackTrace();
             setNothingToUpdateResult(newAppConfig);
             return;
         }
+
 
         // check if current native version supports new content
         if (newContentConfig.getMinimumNativeVersion() > appNativeVersion) {
