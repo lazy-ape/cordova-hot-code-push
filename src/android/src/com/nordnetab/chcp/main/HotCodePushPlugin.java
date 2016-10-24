@@ -143,6 +143,7 @@ public class HotCodePushPlugin extends CordovaPlugin {
         super.onResume(multitasking);
 
         if (!isPluginReadyForWork) {
+            mIsUnRegisterInOnStop = true;
             return;
         }
 
@@ -165,14 +166,22 @@ public class HotCodePushPlugin extends CordovaPlugin {
         }
     }
 
+    private boolean mIsUnRegisterInOnStop = false;
     @Override
     public void onStop() {
+        if(mIsUnRegisterInOnStop){
+            if(EventBus.getDefault().isRegistered(this)){
+                EventBus.getDefault().unregister(this);
+            }
+        }
         super.onStop();
     }
 
     @Override
     public void onDestroy() {
-        EventBus.getDefault().unregister(this);
+        if(EventBus.getDefault().isRegistered(this)){
+            EventBus.getDefault().unregister(this);
+        }
         super.onDestroy();
     }
 
@@ -486,6 +495,8 @@ public class HotCodePushPlugin extends CordovaPlugin {
             return;
         }
 
+        mIsUnRegisterInOnStop = false;
+
         Map<String, String> requestHeaders = null;
         String configURL = chcpXmlConfig.getConfigUrl();
         if (fetchOptions == null) {
@@ -711,6 +722,8 @@ public class HotCodePushPlugin extends CordovaPlugin {
 
         PluginResult result = PluginResultHelper.pluginResultFromEvent(event);
         sendMessageToDefaultCallback(result);
+
+        mIsUnRegisterInOnStop =true;
     }
 
     // endregion
@@ -773,6 +786,8 @@ public class HotCodePushPlugin extends CordovaPlugin {
         }
 
         sendMessageToDefaultCallback(jsResult);
+
+        mIsUnRegisterInOnStop = true;
     }
 
     /**
@@ -823,6 +838,8 @@ public class HotCodePushPlugin extends CordovaPlugin {
         sendMessageToDefaultCallback(jsResult);
 
         rollbackIfCorrupted(event.error());
+
+        mIsUnRegisterInOnStop = true;
     }
 
     // endregion
@@ -870,6 +887,8 @@ public class HotCodePushPlugin extends CordovaPlugin {
         });
 
         cleanupFileSystemFromOldReleases();
+
+        mIsUnRegisterInOnStop = true;
     }
 
     /**
@@ -896,6 +915,8 @@ public class HotCodePushPlugin extends CordovaPlugin {
         sendMessageToDefaultCallback(jsResult);
 
         rollbackIfCorrupted(event.error());
+
+        mIsUnRegisterInOnStop = true;
     }
 
     /**
