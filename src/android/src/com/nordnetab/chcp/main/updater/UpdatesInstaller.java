@@ -3,6 +3,7 @@ package com.nordnetab.chcp.main.updater;
 import android.content.Context;
 
 import com.nordnetab.chcp.main.events.BeforeInstallEvent;
+import com.nordnetab.chcp.main.events.DownloadStatusEvent;
 import com.nordnetab.chcp.main.events.NothingToInstallEvent;
 import com.nordnetab.chcp.main.model.ChcpError;
 import com.nordnetab.chcp.main.model.PluginFilesStructure;
@@ -60,7 +61,12 @@ public class UpdatesInstaller {
         dispatchBeforeInstallEvent();
 
         final WorkerTask task = new InstallationWorker(context, newVersion, currentVersion);
-        execute(task);
+        try {
+            execute(task);
+        }catch (Exception e){
+            e.printStackTrace();
+            DownloadStatusEvent.sendError();
+        }
 
         return ChcpError.NONE;
     }

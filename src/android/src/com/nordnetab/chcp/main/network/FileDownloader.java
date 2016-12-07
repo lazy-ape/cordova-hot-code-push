@@ -2,12 +2,15 @@ package com.nordnetab.chcp.main.network;
 
 import android.util.Log;
 
+import com.nordnetab.chcp.main.events.DownloadStatusEvent;
 import com.nordnetab.chcp.main.model.ManifestFile;
 import com.nordnetab.chcp.main.utils.FilesUtility;
 import com.nordnetab.chcp.main.utils.MD5;
 import com.nordnetab.chcp.main.utils.Paths;
 import com.nordnetab.chcp.main.utils.URLConnectionHelper;
 import com.nordnetab.chcp.main.utils.URLUtility;
+
+import org.greenrobot.eventbus.EventBus;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -45,11 +48,21 @@ public class FileDownloader {
                                      final String contentFolderUrl,
                                      final List<ManifestFile> files,
                                      final Map<String, String> requestHeaders) throws Exception {
+        int i = 0,length = files.size();
+
         for (ManifestFile file : files) {
+            i++;
             String fileUrl = URLUtility.construct(contentFolderUrl, file.name);
             String filePath = Paths.get(downloadFolder, file.name);
             download(fileUrl, filePath, file.hash, requestHeaders);
+
+            DownloadStatusEvent.sendProgress(getFormatterProgress(i * 1.0 /length));
         }
+    }
+
+    public static float getFormatterProgress(double d){
+        String s = String.format("%.2f",d);
+        return Float.valueOf(s);
     }
 
     /**

@@ -6,6 +6,7 @@ import android.util.Log;
 import com.nordnetab.chcp.main.config.ApplicationConfig;
 import com.nordnetab.chcp.main.config.ContentConfig;
 import com.nordnetab.chcp.main.config.ContentManifest;
+import com.nordnetab.chcp.main.events.DownloadStatusEvent;
 import com.nordnetab.chcp.main.events.NothingToUpdateEvent;
 import com.nordnetab.chcp.main.events.UpdateDownloadErrorEvent;
 import com.nordnetab.chcp.main.events.UpdateIsReadyToInstallEvent;
@@ -24,8 +25,8 @@ import com.nordnetab.chcp.main.storage.IObjectFileStorage;
 import com.nordnetab.chcp.main.utils.FilesUtility;
 import com.nordnetab.chcp.main.utils.URLUtility;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import org.greenrobot.eventbus.EventBus;
+
 import java.util.List;
 import java.util.Map;
 
@@ -131,10 +132,12 @@ class UpdateLoaderWorker implements WorkerTask {
 
         recreateDownloadFolder(filesStructure.getDownloadFolder());
 
+        DownloadStatusEvent.sendStart();
         // download files
         boolean isDownloaded = downloadNewAndChangedFiles(newContentConfig.getContentUrl(), diff);
         if (!isDownloaded) {
             cleanUp();
+            DownloadStatusEvent.sendError();
             setErrorResult(ChcpError.FAILED_TO_DOWNLOAD_UPDATE_FILES, newAppConfig);
             return;
         }
@@ -235,6 +238,7 @@ class UpdateLoaderWorker implements WorkerTask {
             FileDownloader.downloadFiles(filesStructure.getDownloadFolder(), contentUrl, downloadFiles, requestHeaders);
         } catch (Exception e) {
             e.printStackTrace();
+            DownloadStatusEvent.sendError();
             isFinishedWithSuccess = false;
         }
 

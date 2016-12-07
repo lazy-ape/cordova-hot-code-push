@@ -4,6 +4,7 @@ import android.content.Context;
 
 import com.nordnetab.chcp.main.config.ApplicationConfig;
 import com.nordnetab.chcp.main.config.ContentManifest;
+import com.nordnetab.chcp.main.events.DownloadStatusEvent;
 import com.nordnetab.chcp.main.events.UpdateInstallationErrorEvent;
 import com.nordnetab.chcp.main.events.UpdateInstalledEvent;
 import com.nordnetab.chcp.main.events.WorkerEvent;
@@ -54,17 +55,20 @@ class InstallationWorker implements WorkerTask {
     public void run() {
         // try to initialize before run
         if (!init()) {
+            DownloadStatusEvent.sendError();
             return;
         }
 
         // validate update
         if (!isUpdateValid(newReleaseFS.getDownloadFolder(), manifestDiff)) {
+            DownloadStatusEvent.sendError();
             setResultForError(ChcpError.UPDATE_IS_INVALID);
             return;
         }
 
         // copy content from the current release to the new release folder
         if (!copyFilesFromCurrentReleaseToNewRelease()) {
+            DownloadStatusEvent.sendError();
             setResultForError(ChcpError.FAILED_TO_COPY_FILES_FROM_PREVIOUS_RELEASE);
             return;
         }
@@ -75,6 +79,7 @@ class InstallationWorker implements WorkerTask {
         // install the update
         boolean isInstalled = moveFilesFromInstallationFolderToWwwFolder();
         if (!isInstalled) {
+            DownloadStatusEvent.sendError();
             cleanUpOnFailure();
             setResultForError(ChcpError.FAILED_TO_COPY_NEW_CONTENT_FILES);
             return;
@@ -83,6 +88,7 @@ class InstallationWorker implements WorkerTask {
         // perform cleaning
         cleanUpOnSuccess();
 
+        DownloadStatusEvent.sendComplete();
         // send notification, that we finished
         setSuccessResult();
     }

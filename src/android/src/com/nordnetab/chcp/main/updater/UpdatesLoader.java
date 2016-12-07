@@ -1,5 +1,6 @@
 package com.nordnetab.chcp.main.updater;
 
+import com.nordnetab.chcp.main.events.DownloadStatusEvent;
 import com.nordnetab.chcp.main.model.ChcpError;
 import com.nordnetab.chcp.main.model.PluginFilesStructure;
 
@@ -46,7 +47,11 @@ public class UpdatesLoader {
         isExecuting = true;
 
         final UpdateLoaderWorker task = new UpdateLoaderWorker(request);
-        executeTask(task);
+        try {
+            executeTask(task);
+        }catch (Exception e){
+            DownloadStatusEvent.sendError();
+        }
 
         return ChcpError.NONE;
     }

@@ -1,9 +1,12 @@
 package com.nordnetab.chcp.main;
 
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.os.Handler;
 import android.text.TextUtils;
 import android.util.Log;
+import android.view.WindowManager;
+import android.widget.Toast;
 
 import com.nordnetab.chcp.main.config.ApplicationConfig;
 import com.nordnetab.chcp.main.config.ChcpXmlConfig;
@@ -14,6 +17,7 @@ import com.nordnetab.chcp.main.events.AssetsInstallationErrorEvent;
 import com.nordnetab.chcp.main.events.AssetsInstalledEvent;
 import com.nordnetab.chcp.main.events.BeforeAssetsInstalledEvent;
 import com.nordnetab.chcp.main.events.BeforeInstallEvent;
+import com.nordnetab.chcp.main.events.DownloadStatusEvent;
 import com.nordnetab.chcp.main.events.NothingToInstallEvent;
 import com.nordnetab.chcp.main.events.NothingToUpdateEvent;
 import com.nordnetab.chcp.main.events.UpdateDownloadErrorEvent;
@@ -143,7 +147,6 @@ public class HotCodePushPlugin extends CordovaPlugin {
         super.onResume(multitasking);
 
         if (!isPluginReadyForWork) {
-            mIsUnRegisterInOnStop = true;
             return;
         }
 
@@ -166,25 +169,12 @@ public class HotCodePushPlugin extends CordovaPlugin {
         }
     }
 
-    private boolean mIsUnRegisterInOnStop = false;
     @Override
     public void onStop() {
-        if(mIsUnRegisterInOnStop){
-            if(EventBus.getDefault().isRegistered(this)){
-                EventBus.getDefault().unregister(this);
-            }
-        }
+        EventBus.getDefault().unregister(this);
+
         super.onStop();
     }
-
-    @Override
-    public void onDestroy() {
-        if(EventBus.getDefault().isRegistered(this)){
-            EventBus.getDefault().unregister(this);
-        }
-        super.onDestroy();
-    }
-
 
     // endregion
 
@@ -495,8 +485,6 @@ public class HotCodePushPlugin extends CordovaPlugin {
             return;
         }
 
-        mIsUnRegisterInOnStop = false;
-
         Map<String, String> requestHeaders = null;
         String configURL = chcpXmlConfig.getConfigUrl();
         if (fetchOptions == null) {
@@ -542,8 +530,11 @@ public class HotCodePushPlugin extends CordovaPlugin {
             return;
         }
 
+        DownloadStatusEvent.sendInstall();
         ChcpError error = UpdatesInstaller.install(cordova.getActivity(), pluginInternalPrefs.getReadyForInstallationReleaseVersionName(), pluginInternalPrefs.getCurrentReleaseVersionName());
         if (error != ChcpError.NONE) {
+
+            DownloadStatusEvent.sendError();
             if (jsCallback != null) {
                 PluginResult errorResult = PluginResultHelper.createPluginResult(UpdateInstallationErrorEvent.EVENT_NAME, null, error);
                 jsCallback.sendPluginResult(errorResult);
@@ -722,8 +713,6 @@ public class HotCodePushPlugin extends CordovaPlugin {
 
         PluginResult result = PluginResultHelper.pluginResultFromEvent(event);
         sendMessageToDefaultCallback(result);
-
-        mIsUnRegisterInOnStop =true;
     }
 
     // endregion
@@ -760,6 +749,8 @@ public class HotCodePushPlugin extends CordovaPlugin {
         // perform installation if allowed
         if (chcpXmlConfig.isAutoInstallIsAllowed() && newContentConfig.getUpdateTime() == UpdateTime.NOW) {
             installUpdate(null);
+        }else{
+            DownloadStatusEvent.sendComplete();
         }
     }
 
@@ -786,8 +777,6 @@ public class HotCodePushPlugin extends CordovaPlugin {
         }
 
         sendMessageToDefaultCallback(jsResult);
-
-        mIsUnRegisterInOnStop = true;
     }
 
     /**
@@ -838,8 +827,6 @@ public class HotCodePushPlugin extends CordovaPlugin {
         sendMessageToDefaultCallback(jsResult);
 
         rollbackIfCorrupted(event.error());
-
-        mIsUnRegisterInOnStop = true;
     }
 
     // endregion
@@ -887,8 +874,6 @@ public class HotCodePushPlugin extends CordovaPlugin {
         });
 
         cleanupFileSystemFromOldReleases();
-
-        mIsUnRegisterInOnStop = true;
     }
 
     /**
@@ -915,8 +900,6 @@ public class HotCodePushPlugin extends CordovaPlugin {
         sendMessageToDefaultCallback(jsResult);
 
         rollbackIfCorrupted(event.error());
-
-        mIsUnRegisterInOnStop = true;
     }
 
     /**
@@ -941,6 +924,47 @@ public class HotCodePushPlugin extends CordovaPlugin {
         }
 
         sendMessageToDefaultCallback(jsResult);
+    }
+
+
+    ProgressDialog mProgressDialog;
+    //下载状态事件
+    @SuppressWarnings("unused")
+    @Subscribe
+    public void onEventMainThread(final DownloadStatusEvent event){
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                if(mProgressDialog == null){
+                    mProgressDialog = new ProgressDialog(cordova.getActivity(), ProgressDialog.THEME_DEVICE_DEFAULT_LIGHT);
+                    mProgressDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                    mProgressDialog.setCanceledOnTouchOutside(false);
+                }
+                if(DownloadStatusEvent.START.equalsIgnoreCase(event.status)){
+                    mProgressDialog.setMessage("正在下载更新文件请稍后...");
+                    if(!mProgressDialog.isShowing()){
+                        mProgressDialog.show();
+                    }
+                }else if(DownloadStatusEvent.DOWNLOADING.equalsIgnoreCase(event.status)){
+                    mProgressDialog.setMessage("正在下载更新文件" + event.progress * 100 + "%...");
+                    if(!mProgressDialog.isShowing()){
+                        mProgressDialog.show();
+                    }
+                }else if(DownloadStatusEvent.INSTALL.equalsIgnoreCase(event.status)){
+                    mProgressDialog.setMessage("正在安装更新");
+                    if(!mProgressDialog.isShowing()){
+                        mProgressDialog.show();
+                    }
+                }else{
+                    if(mProgressDialog.isShowing()){
+                        mProgressDialog.dismiss();
+                    }
+                }
+            }
+        };
+        cordova.getActivity().runOnUiThread(runnable);
+
+
     }
 
     // endregion
