@@ -27,6 +27,8 @@ import com.nordnetab.chcp.main.utils.URLUtility;
 
 import org.greenrobot.eventbus.EventBus;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
