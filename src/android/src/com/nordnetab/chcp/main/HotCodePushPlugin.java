@@ -941,17 +941,17 @@ public class HotCodePushPlugin extends CordovaPlugin {
                     mProgressDialog.setCanceledOnTouchOutside(false);
                 }
                 if(DownloadStatusEvent.START.equalsIgnoreCase(event.status)){
-                    mProgressDialog.setMessage("正在下载更新文件请稍后...");
+                    mProgressDialog.setMessage("正在更新请稍后...");
                     if(!mProgressDialog.isShowing()){
                         mProgressDialog.show();
                     }
                 }else if(DownloadStatusEvent.DOWNLOADING.equalsIgnoreCase(event.status)){
-                    mProgressDialog.setMessage("正在下载更新文件" + event.progress * 100 + "%...");
+                    mProgressDialog.setMessage("正在下载更新" + event.progress * 100 + "%...");
                     if(!mProgressDialog.isShowing()){
                         mProgressDialog.show();
                     }
                 }else if(DownloadStatusEvent.INSTALL.equalsIgnoreCase(event.status)){
-                    mProgressDialog.setMessage("正在安装更新");
+                    mProgressDialog.setMessage("正在安装更新...");
                     if(!mProgressDialog.isShowing()){
                         mProgressDialog.show();
                     }
